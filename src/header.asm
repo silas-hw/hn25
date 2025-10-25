@@ -1,5 +1,4 @@
 ;header for SNES
-;ripped almost directly from nesdoug 'SNES_03'
 
 .segment "SNESHEADER"
 ;$00FFC0-$00FFFF
