@@ -18,7 +18,15 @@ Main:
 	phk
 	plb
 	
+    BLOCK_MOVE  4, MushroomSprites, OAM_BUFFER
+	A8 ;block move will put AXY16. Undo that.
+    lda #$6A ;= 01 101010 = flip all the size bits to large
+			 ;will give us 16x16 tiles
+			 ;leave the 4th sprite small and in negative x
+	sta OAM_BUFFER2
+
     stz level
+
 
 ; DMA from BG_Palette to CGRAM
 	A8
@@ -31,7 +39,7 @@ Main:
 	stx $4302 ; source
 	lda #^BG_Palette
 	sta $4304 ; bank
-	ldx #256
+	ldx #512
 	stx $4305 ; length
 	lda #1
 	sta MDMAEN ; $420b start dma, channel 0
@@ -56,8 +64,6 @@ Main:
 	stx $4305 ; length
 	lda #1
 	sta MDMAEN ; $420b start dma, channel 0
-	
-	
 	
 ; DMA from Tilemap to VRAM	
 	ldx #$6000
@@ -93,17 +99,17 @@ Main:
 	lda #$60 ; bg1 map at VRAM address $6000
 	sta BG1SC ; $2107
 
-	lda #BG1_ON	; $01 = only bg 1 is active
+    ; set base address of sprites in VRAM to same as normal tiles
+    stz OBSEL
+
+	lda #(BG1_ON|SPR_ON)	; $01 = only bg 1 is active
 	sta TM ; $212c
 	
-    lda #$05 ; $0f = turn the screen on (end forced blank)
 	stz INIDISP ; $2100
 
     lda #NMI_ON
     sta NMITIMEN
 
-;    stz INIDISP
-    
     ldx #0
     ldy #0
 
@@ -156,18 +162,29 @@ Main:
     stx INIDISP
     cpx #0
     bne @fade_out
+    
+    ldy #0
+@splash_stall2:
+    XY16
+    jsr Wait_NMI
 
-; load first level?
-    lda #FULL_BRIGHT
-    sta INIDISP
+    iny
+    cpy #100
+    bne @splash_stall2
+    
+    ldy #0
 
     jsr Wait_NMI
     jsr NextLevel
+
+    lda #FULL_BRIGHT
+    sta INIDISP
+
 Infinite_Loop:	
 	A8
 	XY16
 	jsr Wait_NMI
-	
+    jsr DMA_OAM
 	;code goes here
 
 	jmp Infinite_Loop
@@ -224,30 +241,15 @@ NextLevel:
 	lda #1
 	sta MDMAEN ; $420b start dma, channel 0	
 	
-	
-; a is still 8 bit.
-	lda #1 ; mode 1, tilesize 8x8 all
-	sta BGMODE ; $2105
-	
-; 210b = tilesets for bg 1 and bg 2
-; (210c for bg 3 and bg 4)
-; steps of $1000 -321-321... bg2 bg1
-	stz BG12NBA ; $210b BG 1 and 2 TILES at VRAM address $0000
-	
-	; 2107 map address bg 1, steps of $400... -54321yx
-	; y/x = map size... 0,0 = 32x32 tiles
-	; $6000 / $100 = $60
-	lda #$60 ; bg1 map at VRAM address $6000
-	sta BG1SC ; $2107
-
-	lda #BG1_ON	; $01 = only bg 1 is active
-	sta TM ; $212c
-	
     ldx level
     inx
     stx level
 
     rts	
+
+MushroomSprites:
+    .byte $70, $70, $E0, SPR_PRIOR_2|$0A
+EndMushroomSprites:
 
 .include "header.asm"	
 
@@ -255,7 +257,8 @@ NextLevel:
 .segment "RODATA1"
 
 BG_Palette:
-; 256 bytes
+; 512 bytes, full palette for both sprites and bg
+.incbin "assets/palette.pal"
 .incbin "assets/palette.pal"
 
 Tiles:
