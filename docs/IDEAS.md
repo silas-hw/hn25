@@ -11,3 +11,7 @@ Name: Mustafa Mushroom
 
 It's a mushroom person trying to reach the surface.
 
+# Water Design
+We can render the water like this so that it has transparency when you go into it.
+
+![Image of Super Mario World Water Rendering Up-Close](super_mario_world_water.png)
