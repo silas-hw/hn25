@@ -12,6 +12,8 @@ temp6: .res 2
 
 level: .res 2
 
+pad1: .res 2
+
 .segment "RODATA"
 tilemap_table:
     .word .loword(Level1TM), .loword(Level2TM)
