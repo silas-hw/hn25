@@ -10,6 +10,9 @@ temp4: .res 2
 temp5: .res 2
 temp6: .res 2
 
+old_x: .res 1
+old_y: .res 1
+
 level: .res 2
 
 pad1: .res 2
