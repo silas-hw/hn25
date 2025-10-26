@@ -236,46 +236,66 @@ Infinite_Loop:
     inc OAM_BUFFER+1
     A16
 @not_down:
-
-;; check collision
-    ldx OAM_BUFFER
-    ldy OAM_BUFFER+1
-
-    txa
-    lsr a
-    lsr a
-    lsr a
-    lsr a
-    tax
-
-    tya
-    lsr a
-    lsr a
-    lsr a
-    lsr a
-    tay
-
-    cpx #0
-    beq @x_collision
-    bra @no_x_collision
-
-@x_collision:
     A8
+;; check collision
+    lda OAM_BUFFER
+    sta temp2 ; left
+    clc
+    adc #16
+    sta temp3 ; right
+
+    lda OAM_BUFFER+1
+    sta temp4 ; top
+    clc
+    adc #16
+    sta temp5 ; bottom
+; top-left
+    ldx temp2
+    ldy temp4
+    
+    jsr CheckCollision
+    cmp #1
+    beq @handle_collision
+; only going to handle exit area check on top left for ease
+    cmp #2
+    beq @handle_exit
+
+; bottom-left
+    ldx temp2
+    ldy temp5
+    
+    jsr CheckCollision
+    cmp #1
+    beq @handle_collision
+; top-right
+    ldx temp3
+    ldy temp4
+    
+    jsr CheckCollision
+    cmp #1
+    beq @handle_collision
+; bottom-right
+    ldx temp3
+    ldy temp5
+    
+    jsr CheckCollision
+    cmp #1
+    beq @handle_collision
+
+    bra @no_collision
+
+@handle_collision:
     lda old_x
     sta OAM_BUFFER
-    A16   
-@no_x_collision:
- 
-    cpy #0
-    beq @y_collision    
-    bra @no_y_collision   
-
-@y_collision:
-    A8
     lda old_y
     sta OAM_BUFFER+1
-    A16
-@no_y_collision:
+    bra @no_collision
+@handle_exit:
+    A8
+    XY16
+    jsr NextLevel 
+@no_collision:
+    AXY16
     jmp Infinite_Loop	
 Wait_NMI:
 .a8
@@ -331,6 +351,13 @@ NextLevel:
     inx
     stx level
 
+; respawn location
+    lda #$20
+    sta OAM_BUFFER
+    
+    lda #$B0
+    sta OAM_BUFFER+1
+
     rts	
 
 ControllerRead:
@@ -354,7 +381,7 @@ CheckCollision:
 .a8
 .i8
     tya
-    and #%11110000
+    and #$f0
     sta temp1
     
     txa
@@ -366,13 +393,13 @@ CheckCollision:
 
     ora temp1
     tax
-    lda Level1HM, x
+    lda f:Level1HM, x
+      
     rts
-    
-MushroomSprites:
-    .byte $70, $70, $E0, SPR_PRIOR_2|$0A
-EndMushroomSprites:
 
+MushroomSprites:
+    .byte $20, $A0, $E0, SPR_PRIOR_2|$0A
+EndMushroomSprites:
 .include "header.asm"	
 
 
@@ -394,9 +421,9 @@ Level1TM:
 
 Level1HM:
     .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
-    .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
-    .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
-    .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+    .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1
+    .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1
+    .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1
     .byte 1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1
     .byte 1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1
     .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
@@ -407,6 +434,8 @@ Level1HM:
     .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
     .byte 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
     .byte 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+
+
 Level2TM:
 .incbin "assets/level2.map"
 
